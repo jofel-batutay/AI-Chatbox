@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Interface</title>
+    <style>
+        /* CSS Reset and Body Setup */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body { 
+            background-color: #f8f9fa; /* Light gray background behind the main app card */
+            height: 100vh; 
+            height: 100dvh;
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            padding: 16px 24px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+            background-color: #f8f9fa;
+        }
+
+        /* Main Full Screen Card */
+        .main-card { 
+            flex: 1; 
+            background: #ffffff; 
+            border-radius: 24px 24px 0 0; 
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.03); 
+            display: flex; 
+            flex-direction: column; 
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Welcome Screen (Empty State) */
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            transition: opacity 0.3s ease;
+            background: white;
+            overflow-y: auto;
+        }
+
+        .welcome-screen h1 {
+            font-size: 2.5rem;
+            color: #111827;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .welcome-screen p {
+            color: #6b7280;
+            font-size: 1rem;
+            max-width: 500px;
+            margin-bottom: 40px;
+            line-height: 1.5;
+        }
+
+        /* Suggestion Cards Grid */
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .suggestion-card {
+            background: white;
+            border: 1px solid #f3f4f6;
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        }
+
+        .suggestion-card:hover {
+            border-color: #e5e7eb;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+            transform: translateY(-1px);
+        }
+
+        .icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .icon-box.yellow { background: #fef3c7; color: #d97706; }
+        .icon-box.blue { background: #dbeafe; color: #2563eb; }
+        .icon-box.green { background: #dcfce7; color: #16a34a; }
+        .icon-box.pink { background: #fce7f3; color: #db2777; }
+
+        .suggestion-card span.label {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 0.95rem;
+            flex: 1;
+        }
+
+        .suggestion-card span.plus {
+            color: #9ca3af;
+            font-size: 1.25rem;
+            font-weight: 300;
+        }
+
+        /* Chat Area Setup */
+        #chat-box { 
+            flex: 1; 
+            padding: 24px; 
+            overflow-y: auto; 
+            display: none; /* Hidden until first message */
+            flex-direction: column; 
+            align-items: center; 
+            gap: 20px; 
+            scroll-behavior: smooth;
+        }
+
+        .message-wrapper {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message { 
+            padding: 14px 20px; 
+            border-radius: 24px; 
+            max-width: 85%; 
+            font-size: 1rem; 
+            line-height: 1.6; 
+            word-wrap: break-word;
+        }
+
+        .user { 
+            align-self: flex-end; 
+            background: #f3f4f6; 
+            color: #111827; 
+            border-bottom-right-radius: 4px; 
+            white-space: pre-wrap; 
+        }
+
+        .ai { 
+            align-self: flex-start; 
+            background: #ffffff; 
+            color: #111827; 
+            border: 1px solid #e5e7eb;
+            border-bottom-left-radius: 4px; 
+        }
+
+        /* Markdown Styles for AI Messages */
+        .ai p:not(:last-child) { margin-bottom: 12px; }
+        .ai pre { 
+            background: #1f2937; 
+            color: #e5e7eb; 
+            padding: 16px; 
+            border-radius: 12px; 
+            overflow-x: auto; 
+            margin: 12px 0;
+            font-size: 0.9em;
+        }
+        .ai code { 
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background: #f3f4f6; 
+            padding: 3px 6px; 
+            border-radius: 6px; 
+            font-size: 0.9em;
+        }
+        .ai pre code { 
+            background: transparent; 
+            padding: 0; 
+            border-radius: 0;
+            color: inherit; 
+        }
+        .ai ul, .ai ol { 
+            margin-left: 24px; 
+            margin-bottom: 12px;
+        }
+        .ai li { margin-bottom: 6px; }
+        .ai table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        .ai th, .ai td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+        .ai th { background-color: #f9fafb; font-weight: 600; }
+        .ai blockquote { border-left: 4px solid #e5e7eb; padding-left: 16px; color: #6b7280; margin: 12px 0; }
+
+        /* Input Area Setup (Mockup Style) */
+        .input-area { 
+            padding: 0 24px 32px 24px; 
+            display: flex; 
+            justify-content: center; 
+            background: white; 
+            position: relative;
+            z-index: 20;
+            margin-top: auto;
+        }
+
+        .input-box {
+            width: 100%;
+            max-width: 800px;
+            border: 1px solid #c7d2fe;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            transition: border-color 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .input-box:focus-within {
+            border-color: #818cf8;
+            box-shadow: 0 4px 12px rgba(129, 140, 248, 0.1);
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+        }
+
+        input { 
+            flex: 1; 
+            border: none; 
+            outline: none; 
+            font-size: 1rem; 
+            color: #1f2937;
+            background: transparent;
+        }
+
+        input::placeholder {
+            color: #9ca3af;
+        }
+
+        .send-btn { 
+            background: transparent; 
+            color: #1f2937; 
+            border: none; 
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover:not(:disabled) { 
+            background: #f3f4f6; 
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Toolbar Setup */
+        .toolbar-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .tools {
+            display: flex;
+            gap: 16px;
+        }
+
+        .tool-btn {
+            background: transparent;
+            border: none;
+            color: #4b5563;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .tool-btn:hover {
+            color: #111827;
+        }
+
+        .char-count {
+            font-size: 0.85rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .suggestions-grid { grid-template-columns: 1fr; }
+            .tools .tool-btn span { display: none; } /* Hide tool text on mobile */
+            .welcome-screen h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="top-nav">
+    AI Chat
+</header>
+
+<div class="main-card">
+    
+    <!-- Empty State -->
+    <div class="welcome-screen" id="welcome-screen">
+        <h1>Welcome to Script</h1>
+        <p>Get started by Script a task and Chat can do the rest. Not sure where to start?</p>
+        
+        <div class="suggestions-grid">
+            <button class="suggestion-card" onclick="setPrompt('Write a catchy copy for my new product launch')">
+                <div class="icon-box yellow">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+                </div>
+                <span class="label">Write copy</span>
+                <span class="plus">+</span>
+            </button>
+            
+            <button class="suggestion-card" onclick="setPrompt('Generate a prompt to create an image of a futuristic city')">
+                <div class="icon-box blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                </div>
+                <span class="label">Image generation</span>
+                <span class="plus">+</span>
+            </button>
+
+            <button class="suggestion-card" onclick="setPrompt('Help me create a detailed character avatar description')">
+                <div class="icon-box green">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <span class="label">Create avatar</span>
+                <span class="plus">+</span>
+            </button>
+
+            <button class="suggestion-card" onclick="setPrompt('Write a html webpage for AI in web development')">
+                <div class="icon-box pink">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                </div>
+                <span class="label">Write code</span>
+                <span class="plus">+</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Chat Content -->
+    <div id="chat-box"></div>
+    
+    <!-- Interactive Toolbar Area -->
+    <div class="input-area">
+        <div class="input-box">
+            <div class="input-row">
+                <input type="text" id="user-input" maxlength="3000" placeholder="Summarize the latest..." autocomplete="off">
+                <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                </button>
+            </div>
+            
+            <div class="toolbar-row">
+                <div class="tools">
+                    <button class="tool-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        <span>Attach</span>
+                    </button>
+                    <button class="tool-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                        <span>Voice Message</span>
+                    </button>
+                    <button class="tool-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                        <span>Browse Prompts</span>
+                    </button>
+                </div>
+                <div class="char-count" id="char-count">0 / 3,000</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+    import { marked } from "https://esm.run/marked";
+
+    // 1. System-injected API Key configuration
+    const API_KEY = "API_HERE"; 
+
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    
+    // 2. Select the model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const charCountDisplay = document.getElementById('char-count');
+    
+    let messageCounter = 0;
+    const MAX_CHARS = 3000;
+
+    // Updates character counter as user types
+    userInput.addEventListener('input', () => {
+        const currentLength = userInput.value.length;
+        charCountDisplay.innerText = `${currentLength.toLocaleString()} / ${MAX_CHARS.toLocaleString()}`;
+    });
+
+    // Expose functions to the global window object so HTML inline event listeners still work
+    window.setPrompt = function(text) {
+        userInput.value = text;
+        userInput.dispatchEvent(new Event('input')); // trigger character count update
+        userInput.focus();
+    };
+
+    window.sendMessage = async function() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // Hide welcome screen and show chat box on first message
+        if (messageCounter === 0) {
+            welcomeScreen.style.display = 'none';
+            chatBox.style.display = 'flex';
+        }
+
+        // Add user message
+        appendMessage(text, 'user');
+        
+        // Disable input while processing
+        userInput.value = '';
+        userInput.dispatchEvent(new Event('input')); // reset character count
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+
+        // Add loading placeholder
+        const loadingId = appendMessage("Thinking...", 'ai', true);
+
+        try {
+            // Generate response from Gemini API via the official SDK
+            const result = await model.generateContent(text);
+            const response = await result.response;
+            const aiText = response.text();
+            
+            updateMessage(loadingId, aiText);
+        } catch (error) {
+            updateMessage(loadingId, "Error: Could not connect to the AI. Please verify your API Key and internet connection.");
+            console.error("AI Error:", error);
+        } finally {
+            // Re-enable input
+            userInput.disabled = false;
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+    };
+
+    // Appends a new message to the chat layout
+    function appendMessage(text, sender, isLoading = false) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper`;
+
+        const div = document.createElement('div');
+        div.className = `message ${sender}`;
+        div.id = `msg-${messageCounter}`;
+        
+        if (isLoading) div.style.opacity = '0.6';
+        
+        // Parse markdown exclusively for completed AI messages
+        if (sender === 'ai' && !isLoading) {
+            div.innerHTML = marked.parse(text);
+        } else {
+            div.innerText = text;
+        }
+
+        wrapper.appendChild(div);
+        chatBox.appendChild(wrapper);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        return messageCounter++;
+    }
+
+    function updateMessage(id, text) {
+        const div = document.getElementById(`msg-${id}`);
+        if (div) {
+            div.innerHTML = marked.parse(text);
+            div.style.opacity = '1';
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    userInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && !userInput.disabled) {
+            window.sendMessage();
+        }
+    });
+</script>
+
+</body>
+</html>
